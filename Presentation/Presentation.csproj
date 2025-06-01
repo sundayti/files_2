@@ -14,23 +14,25 @@
     </PackageReference>
     <PackageReference Include="Google.Protobuf" Version="3.31.1" />
 
-      <!-- CORE MediatR -->
-  <PackageReference Include="MediatR" Version="11.1.0" />
-
-  <!-- DI-расширение MediatR -->
-  <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
+    <!-- CORE MediatR -->
+    <PackageReference Include="MediatR" Version="11.1.0" />
+    <!-- DI-расширение MediatR -->
+    <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.2"/>
+        <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="8.1.1" />
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="8.1.1" />
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="8.1.1" />
 
     <!-- Другие ваши пакеты (OpenAPI, EF Core Design и т.д.) -->
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.0" />
+
   </ItemGroup>
 
   <ItemGroup>
     <!-- Ссылки на Domain, Application, Infrastructure проекты -->
+    <!-- Путь здесь – относительный от Presentation/Presentation.csproj -->
     <ProjectReference Include="..\Application\Application.csproj" />
-    <ProjectReference Include="..\FileStoringService.Domain\FileStoringService.Domain.csproj" />
-    <ProjectReference Include="..\FileStoringService.Application\FileStoringService.Application.csproj" />
-    <ProjectReference Include="..\FileStoringService.Infrastructure\FileStoringService.Infrastructure.csproj" />
+    <ProjectReference Include="..\Domain\Domain.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
 
