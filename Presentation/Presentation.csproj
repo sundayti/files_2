@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- gRPC и Protobuf -->
+    <PackageReference Include="Grpc.AspNetCore" Version="2.62.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.62.0">
+      <PrivateAssets>All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Google.Protobuf" Version="3.31.1" />
+
+      <!-- CORE MediatR -->
+  <PackageReference Include="MediatR" Version="11.1.0" />
+
+  <!-- DI-расширение MediatR -->
+  <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
+
+    <!-- Другие ваши пакеты (OpenAPI, EF Core Design и т.д.) -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Ссылки на Domain, Application, Infrastructure проекты -->
+    <ProjectReference Include="..\Application\Application.csproj" />
+    <ProjectReference Include="..\FileStoringService.Domain\FileStoringService.Domain.csproj" />
+    <ProjectReference Include="..\FileStoringService.Application\FileStoringService.Application.csproj" />
+    <ProjectReference Include="..\FileStoringService.Infrastructure\FileStoringService.Infrastructure.csproj" />
+    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Привязка .proto для генерации серверных Stub-ов -->
+    <Protobuf Include="Protos\file_storage.proto" GrpcServices="Server" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\.dockerignore">
+      <Link>.dockerignore</Link>
+    </Content>
+  </ItemGroup>
+</Project>

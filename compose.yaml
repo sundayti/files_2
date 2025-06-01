@@ -1,0 +1,78 @@
+﻿services:
+
+  # --------------------------
+  # PostgreSQL service
+  # --------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: filestoring-postgres
+    restart: always
+    env_file:
+      - ./.env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - filestoring_network
+
+  # --------------------------
+  # MinIO service
+  # --------------------------
+  minio:
+    # Изменили тег на "latest" (он всегда доступен на Docker Hub)
+    image: minio/minio:latest
+    container_name: filestoring-minio
+    restart: always
+    env_file:
+      - ./.env
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web-консоль MinIO
+    networks:
+      - filestoring_network
+
+  # --------------------------
+  # API-сервис (FileStoringService.API)
+  # --------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Presentation/Dockerfile
+    image: filestoringservice-api:latest
+    container_name: filestoring-api
+    restart: always
+    depends_on:
+      - postgres
+      - minio
+    env_file:
+      - ./.env
+    environment:
+      - ConnectionStrings__Postgres=${ConnectionStrings__Postgres}
+      - Minio__Endpoint=${Minio__Endpoint}
+      - Minio__AccessKey=${Minio__AccessKey}
+      - Minio__SecretKey=${Minio__SecretKey}
+      - Minio__BucketName=${Minio__BucketName}
+      - Minio__UseSSL=${Minio__UseSSL}
+    ports:
+      - "5001:5001"   # gRPC-порт
+    networks:
+      - filestoring_network
+
+volumes:
+  postgres_data:
+  minio_data:
+
+networks:
+  filestoring_network:
+    driver: bridge

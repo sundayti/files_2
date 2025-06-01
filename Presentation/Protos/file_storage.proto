@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option csharp_namespace = "Presentation.Protos";
+package filestoring;
+
+// ------ RPC служба для работы с файлами ------
+
+service FileStorage {
+  // Загрузка файла. Unary RPC, т.е. весь файл передаётся в одном запросе.
+  rpc UploadFile(UploadFileRequest) returns (UploadFileReply);
+
+  // Скачивание файла по ID.
+  rpc DownloadFile(FileRequest) returns (DownloadFileReply);
+}
+
+// Запрос на загрузку: содержимое + имя файла
+message UploadFileRequest {
+  bytes content = 1;    // Сырые байты файла
+  string file_name = 2; // Имя файла, например "document.pdf"
+}
+
+// Ответ на загрузку: возвращаем новый или существующий FileId
+message UploadFileReply {
+  string file_id = 1;   // Guid в виде строки
+}
+
+// Запрос на скачивание: передаём FileId
+message FileRequest {
+  string file_id = 1;
+}
+
+// Ответ на скачивание: байты файла + метаинформация
+message DownloadFileReply {
+  bytes content = 1;     // Сырые байты файла
+  string file_name = 2;  // Имя файла
+  string content_type = 3; // MIME-тип (например, "application/pdf")
+}
