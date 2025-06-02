@@ -65,9 +65,10 @@
       - Minio__BucketName=${Minio__BucketName}
       - Minio__UseSSL=${Minio__UseSSL}
     ports:
-      - "5001:5001"   # gRPC-порт
+      - "5001:5001"   # gRPC (HTTPS, HTTP2)
+      - "5002:5002"   # REST (HTTP/1.1)
     networks:
-      - filestoring_network
+      - filestoring_network 
 
 volumes:
   postgres_data:
