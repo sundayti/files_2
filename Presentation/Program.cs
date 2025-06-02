@@ -5,8 +5,10 @@ using Domain.Interfaces;
 using Infrastructure.Persistence;
 using Infrastructure.Services;
 using MediatR;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using Presentation.Services;
 
@@ -50,33 +52,32 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc(
         "v1",
-        new OpenApiInfo 
-        { 
-            Title = "FileStoringService API", 
+        new OpenApiInfo
+        {
+            Title = "FileStoringService API",
             Version = "v1",
             Description = "REST-часть API для загрузки/скачивания файлов"
         }
     );
-    // Если используете аннотации [SwaggerOperation], [SwaggerResponse] и т. д.:
     c.EnableAnnotations();
 });
 
 // -------------------------------
-// 6. Kestrel: HTTP/1.1 для REST (5002) и HTTPS/HTTP2 для gRPC (5001)
+// 6. Kestrel: HTTP/1.1 (+ HTTP/2 plaintext) для REST (5002) и HTTP/2 plaintext для gRPC (5001)
 // -------------------------------
 builder.WebHost.ConfigureKestrel(options =>
 {
-    // 6.1. HTTP/1.1 (+ опционально HTTP/2) для REST-контроллеров
+    // 6.1. HTTP/1.1 (+ HTTP/2 plaintext) для REST-контроллеров на порту 5002
     options.ListenAnyIP(5002, listenOptions =>
     {
         listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
     });
 
-    // 6.2. HTTPS + HTTP/2 для gRPC
+    // 6.2. HTTP/2 plaintext (без TLS) для gRPC на порту 5001
     options.ListenAnyIP(5001, listenOptions =>
     {
-        listenOptions.UseHttps();                // самоподписанный сертификат в dev
         listenOptions.Protocols = HttpProtocols.Http2;
+        // НЕ вызываем listenOptions.UseHttps() — т.к. TLS завершает Nginx
     });
 });
 
@@ -95,7 +96,7 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "FileStoringService API V1");
-    c.RoutePrefix = "swagger";  // Swagger UI будет доступен по /swagger
+    c.RoutePrefix = "swagger";
 });
 
 // 7.2. Маршрутизация
@@ -110,7 +111,7 @@ app.MapGrpcService<FileStorageGrpcService>();
 // 8.2. REST-контроллеры (FilesController)
 app.MapControllers();
 
-// 8.3. Простой «ping» (можно убрать)
+// 8.3. Простой «ping»
 app.MapGet("/", () => "FileStoringService API is running.");
 
 // -------------------------------
