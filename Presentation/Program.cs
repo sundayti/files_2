@@ -22,7 +22,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 
 // ------------------------------------------------------
-// 2. Регистрация MinIO-настроек (класс MinioSettings должен быть в Infrastructure/Services)
+// 2. Регистрация MinIO-настроек
 // ------------------------------------------------------
 builder.Services.Configure<MinioSettings>(
     builder.Configuration.GetSection("Minio")
@@ -41,10 +41,8 @@ builder.Services.AddDbContext<FileDbContext>(options =>
     options.UseNpgsql(connectionString)
 );
 
-// Предполагается, что FileRepository реализует IFileRepository
+// Регистрируем репозиторий и хранилище
 builder.Services.AddScoped<IFileRepository, FileRepository>();
-
-// Предполагается, что MinioStorageClient реализует IStorageClient и читает MinioSettings
 builder.Services.AddScoped<IStorageClient, MinioStorageClient>();
 
 // ------------------------------------------------------
@@ -79,29 +77,35 @@ builder.Services.AddSwaggerGen(c =>
 
 // ------------------------------------------------------
 // 7. Конфигурация Kestrel: 
-//    - HTTP/1.1 (+ HTTP/2 plaintext) для REST на 5002 
-//    - HTTP/2 plaintext для gRPC на 5001
+//    - HTTP/1.1 (+ HTTP/2) для REST на 5002 
+//    - HTTP/2 для gRPC на 5001
 // ------------------------------------------------------
 builder.WebHost.ConfigureKestrel(options =>
 {
-    // порт 5002: REST (HTTP/1.1 + HTTP/2 plaintext)
+    // REST: HTTP/1.1 + HTTP/2 plaintext на порт 5002
     options.ListenAnyIP(5002, listenOptions =>
     {
         listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
     });
 
-    // порт 5001: gRPC (HTTP/2 plaintext)
+    // gRPC: HTTP/2 plaintext на порт 5001 (UseHttps не нужен — TLS делает Nginx)
     options.ListenAnyIP(5001, listenOptions =>
     {
         listenOptions.Protocols = HttpProtocols.Http2;
-        // Не вызываем UseHttps(), так как TLS завершаем в Nginx
     });
 });
 
-// ------------------------------------------------------
-// 8. Построение приложения
-// ------------------------------------------------------
 var app = builder.Build();
+
+// ------------------------------------------------------
+// 8. Автоматическое применение миграций при старте
+// ------------------------------------------------------
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<FileDbContext>();
+    // Попытаемся применить все миграции. Если таблицы отсутствуют, EF Core их создаст.
+    dbContext.Database.Migrate();
+}
 
 // ------------------------------------------------------
 // 9. Middleware при разработке
@@ -122,25 +126,13 @@ app.UseSwaggerUI(c =>
 });
 
 // ------------------------------------------------------
-// 11. Маршрутизация
+// 11. Маршрутизация: gRPC + REST
 // ------------------------------------------------------
-app.MapGrpcService<FileStorageGrpcService>(); // gRPC-сервис
-app.MapControllers();                          // REST-контроллеры
-
-// Простой пинг для проверки
+app.MapGrpcService<FileStorageGrpcService>();
+app.MapControllers();
 app.MapGet("/", () => "FileStoringService API is running.");
 
 // ------------------------------------------------------
-// 12. Применение миграций автоматически (опционально)
-//     Если вы хотите во время старта создавать таблицы:
-// ------------------------------------------------------
-// using (var scope = app.Services.CreateScope())
-// {
-//     var dbContext = scope.ServiceProvider.GetRequiredService<FileDbContext>();
-//     dbContext.Database.Migrate();
-// }
-
-// ------------------------------------------------------
-// 13. Запуск
+// 12. Запуск
 // ------------------------------------------------------
 app.Run();
