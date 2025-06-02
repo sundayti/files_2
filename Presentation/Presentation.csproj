@@ -24,7 +24,7 @@
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="8.1.1" />
 
     <!-- Другие ваши пакеты (OpenAPI, EF Core Design и т.д.) -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.3" />
 
   </ItemGroup>
 
