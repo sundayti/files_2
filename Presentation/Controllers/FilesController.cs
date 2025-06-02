@@ -8,68 +8,64 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 namespace Presentation.Controllers;
 
-[ApiController]
-[Route("api/files")]
-public class FilesController : ControllerBase
-{
-    private readonly IMediator _mediator;
-
-    public FilesController(IMediator mediator)
+ [ApiController]
+    [Route("api/files")]
+    public class FilesController : ControllerBase
     {
-        _mediator = mediator;
-    }
+        private readonly IMediator _mediator;
 
-    /// <summary>
-    /// REST-концевик для загрузки файла.
-    /// Получает multipart/form-data: поле "file".
-    /// Возвращает JSON { "fileId": "GUID" }.
-    /// </summary>
-    [HttpPost("upload")]
-    [RequestSizeLimit(100_000_000)] // до 100 МБ, настроить по необходимости
-    public async Task<IActionResult> Upload([FromForm] IFormFile file)
-    {
-        if (file == null || file.Length == 0)
-            return BadRequest(new { error = "File is required." });
-
-        // Считываем содержимое в память (MemoryStream)
-        using var ms = new MemoryStream();
-        await file.CopyToAsync(ms);
-        byte[] content = ms.ToArray();
-
-        // Формируем команду для MediatR
-        var command = new UploadFileCommand(new MemoryStream(content), file.FileName);
-        UploadFileResult result = await _mediator.Send(command);
-
-        return Ok(new { fileId = result.FileId });
-    }
-
-    /// <summary>
-    /// REST-концевик для скачивания файла.
-    /// GET /api/files/{id}
-    /// Возвращает File(byte[], contentType, fileName).
-    /// </summary>
-    [HttpGet("{id}")]
-    public async Task<IActionResult> Download(string id)
-    {
-        if (!Guid.TryParse(id, out var fileGuid))
-            return BadRequest(new { error = "Invalid GUID format." });
-
-        try
+        public FilesController(IMediator mediator)
         {
-            // Запрашиваем через MediatR
-            FileDto fileDto = await _mediator.Send(new GetFileQuery(fileGuid));
-
-            // Возвращаем двоичный файл с правильными заголовками
-            return File(
-                fileDto.Content,
-                string.IsNullOrWhiteSpace(fileDto.ContentType) 
-                    ? MediaTypeNames.Application.Octet : fileDto.ContentType,
-                fileDto.FileName
-            );
+            _mediator = mediator;
         }
-        catch (KeyNotFoundException)
+
+        /// <summary>
+        /// Загружает файл через multipart/form-data.
+        /// Возвращает JSON: { "fileId": "GUID" }.
+        /// </summary>
+        [HttpPost("upload")]
+        [RequestSizeLimit(100_000_000)] // 100 МБ лимит тела запроса (настраивается)
+        public async Task<IActionResult> Upload([FromForm] IFormFile file)
         {
-            return NotFound(new { error = $"File with ID = {id} not found." });
+            if (file == null || file.Length == 0)
+                return BadRequest(new { error = "File is required." });
+
+            // Считываем файл в память
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms);
+            var memoryStream = new MemoryStream(ms.ToArray());
+
+            // Внутри используется тот же UploadFileCommand, что и в gRPC-хендлере
+            var command = new UploadFileCommand(memoryStream, file.FileName);
+            var result = await _mediator.Send(command);
+
+            return Ok(new { fileId = result.FileId });
+        }
+
+        /// <summary>
+        /// Скачивает файл по его GUID.
+        /// Возвращает двоичный контент файла.
+        /// </summary>
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Download(string id)
+        {
+            if (!Guid.TryParse(id, out var fileGuid))
+                return BadRequest(new { error = "Invalid GUID format." });
+
+            try
+            {
+                var dto = await _mediator.Send(new GetFileQuery(fileGuid));
+                return File(
+                    dto.Content,
+                    string.IsNullOrWhiteSpace(dto.ContentType) 
+                        ? MediaTypeNames.Application.Octet 
+                        : dto.ContentType,
+                    dto.FileName
+                );
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound(new { error = $"File with ID = {id} not found." });
+            }
         }
     }
-}
